@@ -232,6 +232,7 @@ L:
 			conn = t.(*Connection)
 			if conn.IsConnected() && !conn.isIdle() {
 				if err := conn.SetTimeout(timeout); err == nil {
+					conn.SetAppEngineContext(appengineContext)
 					return conn, nil
 				}
 			}
@@ -272,6 +273,7 @@ L:
 		conn.refresh()
 
 		nd.connectionCount.IncrementAndGet()
+		conn.SetAppEngineContext(appengineContext)
 		return conn, nil
 	}
 	return nil, NewAerospikeError(NO_AVAILABLE_CONNECTIONS_TO_NODE)

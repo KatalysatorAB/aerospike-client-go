@@ -26,6 +26,7 @@ import (
 	"sync"
 
 	. "github.com/aerospike/aerospike-client-go/types"
+	"golang.org/x/net/context"
 )
 
 // Client encapsulates an Aerospike cluster.
@@ -83,9 +84,41 @@ func NewClientWithPolicyAndHost(policy *ClientPolicy, hosts ...*Host) (*Client, 
 
 }
 
+// NewClientWithPolicyAndHost generates a new Client the specified ClientPolicy and
+// sets up the cluster using the provided hosts.
+// If the policy is nil, the default relevant policy will be used.
+func NewClientWithPolicyAndHostAppEngine(c context.Context, policy *ClientPolicy, hosts ...*Host) (*Client, error) {
+	if policy == nil {
+		policy = NewClientPolicy()
+	}
+
+	client := &Client{
+		DefaultPolicy:      NewPolicy(),
+		DefaultWritePolicy: NewWritePolicy(0, 0),
+		DefaultScanPolicy:  NewScanPolicy(),
+		DefaultQueryPolicy: NewQueryPolicy(),
+		DefaultAdminPolicy: NewAdminPolicy(),
+	}
+
+	client.SetAppEgnineContext(c)
+
+	cluster, err := NewCluster(policy, hosts)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to connect to host(s): %v", hosts)
+	}
+	client.cluster = cluster
+	return client, nil
+}
+
 //-------------------------------------------------------
 // Cluster Connection Management
 //-------------------------------------------------------
+
+// Stores the current context from appengine requests
+var appengineContext context.Context
+func (clnt *Client) SetAppEgnineContext(c context.Context) {
+	appengineContext = c
+}
 
 // Close closes all client connections to database server nodes.
 func (clnt *Client) Close() {

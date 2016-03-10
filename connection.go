@@ -17,9 +17,10 @@ package aerospike
 import (
 	"net"
 	"time"
-
 	. "github.com/aerospike/aerospike-client-go/logger"
 	. "github.com/aerospike/aerospike-client-go/types"
+	socket "google.golang.org/appengine/socket"
+	"golang.org/x/net/context"
 )
 
 // Connection represents a connection with a timeout.
@@ -32,7 +33,7 @@ type Connection struct {
 	idleDeadline time.Time
 
 	// connection object
-	conn net.Conn
+	conn *socket.Conn
 }
 
 func errToTimeoutErr(err error) error {
@@ -49,7 +50,8 @@ func errToTimeoutErr(err error) error {
 func NewConnection(address string, timeout time.Duration) (*Connection, error) {
 	newConn := &Connection{}
 
-	conn, err := net.DialTimeout("tcp", address, timeout)
+	conn, err := socket.DialTimeout(appengineContext, "tcp", address, time.Second)
+
 	if err != nil {
 		Logger.Error("Connection to address `" + address + "` failed to establish with error: " + err.Error())
 		return nil, errToTimeoutErr(err)
@@ -61,6 +63,13 @@ func NewConnection(address string, timeout time.Duration) (*Connection, error) {
 		return nil, err
 	}
 	return newConn, nil
+}
+
+// Set connect context to appengine context
+func (ctn *Connection) SetAppEngineContext(c context.Context) {
+	if ctn.conn != nil {
+		ctn.conn.SetContext(c)
+	}
 }
 
 // Write writes the slice to the connection buffer.
